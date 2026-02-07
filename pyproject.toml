@@ -19,14 +19,21 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: GNU Affero General Public License v3 (AGPL)"
 ]
-dependencies = [
-    "dp-accounting==0.4.4",
-    "scipy>=1.11.3",
+
+[project.optional-dependencies]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+    "myst-parser[linkify]>=3.0",
+    "nbsphinx>=0.9",
+    "sphinx-copybutton>=0.5",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "pytest-codeblocks>=0.17",
+    "scikit-learn>=1.3",
 ]
 
 [tool.pytest.ini_options]

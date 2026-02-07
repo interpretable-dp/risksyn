@@ -2,7 +2,7 @@ import json
 import math
 import warnings
 from pathlib import Path
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
 import pandas as pd
 from dpmm.models.base.mechanisms.cdp2adp import cdp_delta
@@ -59,6 +59,10 @@ class Generator:
         Risk specification defining the privacy guarantee.
     model : str, default "aim"
         Synthesis model to use. One of "mst", "aim", or "privbayes".
+    gen_kwargs : dict, optional
+        Additional keyword arguments passed to the underlying model.
+        For "aim" and "privbayes", supports ``degree`` (default 2) to control
+        the maximum degree of marginals. "mst" is inherently degree-2.
     proc_epsilon : float, default 0.1
         Epsilon budget allocated to data preprocessing (domain estimation).
         Only used if domain bounds are not provided for numeric columns.
@@ -72,7 +76,7 @@ class Generator:
     --------
     >>> from risksyn import Risk, Generator
     >>> risk = Risk.from_advantage(0.2)
-    >>> gen = Generator(risk=risk, model="mst")
+    >>> gen = Generator(risk=risk, model="aim")
     >>> gen.fit(df, domain={"age": {"lower": 0, "upper": 100}})
     >>> synthetic_df = gen.generate(count=1000)
     """
@@ -81,6 +85,7 @@ class Generator:
         self,
         risk: Risk,
         model: str = "aim",
+        gen_kwargs: Optional[Dict] = None,
         proc_epsilon: float = _DEFAULT_PROC_EPSILON,
     ):
         if model not in MODELS:
@@ -90,6 +95,7 @@ class Generator:
 
         self._risk = risk
         self._model = model
+        self._gen_kwargs = gen_kwargs
         self._proc_epsilon = proc_epsilon
         self._pipeline = None
 
@@ -159,6 +165,7 @@ class Generator:
             epsilon=_CALIBRATION_EPSILON,
             delta=delta,
             proc_epsilon=proc_epsilon,
+            gen_kwargs=self._gen_kwargs,
         )
         self._pipeline.fit(data, domain)
         return self
@@ -204,11 +211,9 @@ class Generator:
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
-        # Store metadata
+        # Store metadata (gen_kwargs handled by dpmm pipeline serialization)
         metadata = {
             "risk_zcdp": self._risk.zcdp,
-            "model": self._model,
-            "proc_epsilon": self._proc_epsilon,
         }
         with open(path / "metadata.json", "w") as f:
             json.dump(metadata, f, indent=2)
@@ -238,15 +243,11 @@ class Generator:
         with open(path / "metadata.json") as f:
             metadata = json.load(f)
 
-        # Create generator instance
+        # Create generator instance with minimal config (pipeline has the rest)
         risk = Risk.from_zcdp(metadata["risk_zcdp"])
-        gen = cls(
-            risk=risk,
-            model=metadata["model"],
-            proc_epsilon=metadata["proc_epsilon"],
-        )
+        gen = cls(risk=risk)
 
-        # Load pipeline
+        # Load pipeline (contains model config)
         gen._pipeline = GenerativePipeline.load(path / "pipeline")
 
         return gen
