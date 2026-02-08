@@ -24,7 +24,6 @@ to be close to the original, depending on the privacy level.
 
 In a glance:
 
-| ---------------- | --------------------------------- |
 | Aspect           | Support
 | ---------------- | --------------------------------- |
 | Domain           | Tabular data                      |
@@ -33,12 +32,6 @@ In a glance:
 | Validity         | Low-degree marginals only         |
 
 ### Installation
-
-Install with pip:
-<!--pytest.mark.skip-->
-```bash
-pip install risksyn
-```
 
 For local development:
 <!--pytest.mark.skip-->
