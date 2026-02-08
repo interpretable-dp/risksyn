@@ -25,6 +25,8 @@ to be close to the original, depending on the privacy level.
 In a glance:
 
 | ---------------- | --------------------------------- |
+| Aspect           | Support
+| ---------------- | --------------------------------- |
 | Domain           | Tabular data                      |
 | Dimensionality   | Up to 32 features                 |
 | Privacy unit     | One data record = one individual  |
