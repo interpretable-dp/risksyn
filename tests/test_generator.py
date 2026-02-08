@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from sklearn.datasets import load_wine
 
-from risksyn import Generator, Risk
+from risksyn import AIMGenerator, Risk
 
 
 # Simple dataset for fast tests
@@ -50,7 +50,7 @@ def wine_domain(wine_df):
 def test_generate_basic(simple_df, simple_domain):
     """Basic generation test with simple data."""
     risk = Risk.from_zcdp(0.5)
-    gen = Generator(risk=risk, model="mst")
+    gen = AIMGenerator(risk=risk)
     gen.fit(simple_df, domain=simple_domain)
     synth = gen.generate(count=10)
 
@@ -62,7 +62,7 @@ def test_generate_basic(simple_df, simple_domain):
 def test_raises_when_rho_less_than_proc_rho(simple_df, proc_epsilon):
     """Should raise in fit() when risk.zcdp <= proc_rho and preprocessing is needed."""
     risk = Risk.from_zcdp(0.1)
-    gen = Generator(risk=risk, model="mst", proc_epsilon=proc_epsilon)
+    gen = AIMGenerator(risk=risk, proc_epsilon=proc_epsilon)
     with pytest.raises(ValueError, match="Insufficient privacy budget"):
         gen.fit(simple_df)  # No domain -> needs preprocessing
 
@@ -72,9 +72,12 @@ def test_warns_when_gen_rho_less_than_proc_rho():
     # proc_rho for proc_epsilon=1.0 is ~0.368
     # risk.zcdp=0.5 gives gen_rho=0.132 < proc_rho -> warning
     np.random.seed(42)
-    df = pd.DataFrame({"x": np.random.uniform(-1000, 1000, 500)})
+    df = pd.DataFrame({
+        "x": np.random.uniform(-1000, 1000, 500),
+        "y": np.random.uniform(-1000, 1000, 500),
+    })
     risk = Risk.from_zcdp(0.5)
-    gen = Generator(risk=risk, model="mst", proc_epsilon=1.0)
+    gen = AIMGenerator(risk=risk, proc_epsilon=1.0)
     with pytest.warns(
         UserWarning,
         match="Privacy budget for generation .* is smaller than for processing",
@@ -85,7 +88,7 @@ def test_warns_when_gen_rho_less_than_proc_rho():
 def test_no_warning_when_domain_provided(simple_df, simple_domain):
     """Should not warn when full domain is provided (no preprocessing needed)."""
     risk = Risk.from_zcdp(0.008)  # Would warn without domain
-    gen = Generator(risk=risk, model="mst")
+    gen = AIMGenerator(risk=risk)
     with pytest.warns() as record:
         gen.fit(simple_df, domain=simple_domain)
     user_warnings = [w for w in record if issubclass(w.category, UserWarning)]
@@ -95,7 +98,7 @@ def test_no_warning_when_domain_provided(simple_df, simple_domain):
 def test_no_error_with_low_budget_when_domain_provided(simple_df, simple_domain):
     """Should not error with very low budget when full domain is provided."""
     risk = Risk.from_zcdp(0.001)  # Would error without domain
-    gen = Generator(risk=risk, model="mst")
+    gen = AIMGenerator(risk=risk)
     gen.fit(simple_df, domain=simple_domain)
     synth = gen.generate(count=5)
     assert len(synth) == 5
@@ -104,23 +107,19 @@ def test_no_error_with_low_budget_when_domain_provided(simple_df, simple_domain)
 def test_generate_before_fit_raises():
     """Should raise if generate() called before fit()."""
     risk = Risk.from_zcdp(0.5)
-    gen = Generator(risk=risk, model="mst")
+    gen = AIMGenerator(risk=risk)
     with pytest.raises(RuntimeError, match="Must call fit"):
         gen.generate(count=10)
 
 
-def test_unknown_model():
-    """Should raise for unknown model."""
-    risk = Risk.from_zcdp(0.5)
-    with pytest.raises(ValueError, match="Unknown model"):
-        Generator(risk=risk, model="unknown")
-
-
 def test_categorical_only_no_preprocessing():
     """Categorical-only data should not require preprocessing."""
-    df = pd.DataFrame({"cat": ["a", "b", "c"] * 10})
+    df = pd.DataFrame({
+        "cat1": ["a", "b", "c"] * 10,
+        "cat2": ["x", "y", "z"] * 10,
+    })
     risk = Risk.from_zcdp(0.001)  # Very low budget
-    gen = Generator(risk=risk, model="mst")
+    gen = AIMGenerator(risk=risk)
     gen.fit(df)
     synth = gen.generate(count=5)
     assert len(synth) == 5
@@ -132,14 +131,14 @@ def test_categorical_only_no_preprocessing():
 def test_store_and_load(simple_df, simple_domain, tmp_path):
     """Test storing and loading a fitted generator."""
     risk = Risk.from_zcdp(0.5)
-    gen = Generator(risk=risk, model="mst")
+    gen = AIMGenerator(risk=risk)
     gen.fit(simple_df, domain=simple_domain)
 
     # Store
     gen.store(tmp_path / "generator")
 
     # Load
-    loaded = Generator.load(tmp_path / "generator")
+    loaded = AIMGenerator.load(tmp_path / "generator")
 
     # Generate from loaded
     synth = loaded.generate(count=10)
@@ -150,7 +149,7 @@ def test_store_and_load(simple_df, simple_domain, tmp_path):
 def test_store_before_fit_raises(tmp_path):
     """Should raise if store() called before fit()."""
     risk = Risk.from_zcdp(0.5)
-    gen = Generator(risk=risk, model="mst")
+    gen = AIMGenerator(risk=risk)
     with pytest.raises(RuntimeError, match="Must call fit"):
         gen.store(tmp_path / "generator")
 
@@ -162,7 +161,7 @@ def test_store_before_fit_raises(tmp_path):
 def test_wine_integration(advantage: float, wine_df, wine_domain):
     """Integration test with wine dataset."""
     risk = Risk.from_advantage(advantage)
-    gen = Generator(risk=risk, model="mst")
+    gen = AIMGenerator(risk=risk)
     gen.fit(wine_df, domain=wine_domain)
     synth = gen.generate(count=10)
 
