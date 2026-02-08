@@ -1,5 +1,14 @@
 # risksyn
 
+[![docs](https://app.readthedocs.org/projects/risksyn/badge/?version=latest)](https://risksyn.readthedocs.io/latest/)
+[![CI](https://github.com/interpretable-dp/risksyn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/interpretable-dp/risksyn/actions/workflows/ci.yml)
+
+---
+
+⚠️  This is a research prototype. Avoid or be extra careful when using in production.
+
+---
+
 Synthetic data generation with interpretable privacy guarantees in terms of attack risk.
 
 This library provides privacy-preserving synthetic tabular data generation using differential
