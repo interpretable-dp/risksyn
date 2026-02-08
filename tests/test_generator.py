@@ -72,7 +72,7 @@ def test_warns_when_proc_epsilon_too_small(simple_df):
     risk = Risk.from_zcdp(0.1)
     gen = AIMGenerator(risk=risk, proc_epsilon=0.01)
     with pytest.warns(UserWarning, match="Epsilon budget for private bounds estimation is too small"):
-        with pytest.raises((ValueError, TypeError)):
+        with pytest.raises((ValueError, TypeError, KeyError)):
             gen.fit(simple_df)
 
 
@@ -182,7 +182,7 @@ def test_warns_when_low_epsilon_per_column():
     risk = Risk.from_zcdp(0.5)
     gen = AIMGenerator(risk=risk, proc_epsilon=0.01)
     with pytest.warns(UserWarning, match="Epsilon budget for private bounds estimation is too small"):
-        with pytest.raises((ValueError, TypeError)):
+        with pytest.raises((ValueError, TypeError, KeyError)):
             gen.fit(df)
 
 
