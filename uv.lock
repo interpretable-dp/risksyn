@@ -944,16 +944,16 @@ wheels = [
 
 [[package]]
 name = "riskcal"
-version = "1.3.0"
+version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dp-accounting" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.17.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/73/50/2e01232804ee2b96cb9eab51103def8c9f1addf3e8a6e6f3f266fbd918e8/riskcal-1.3.0.tar.gz", hash = "sha256:a0f10282e348872d568b6a3449e10858e86872ddcfd1b8285c41629cc127ab00", size = 27567 }
+sdist = { url = "https://files.pythonhosted.org/packages/7c/e4/4f6141581eb437c0a46f08948a809ef8389acbeee465e99709dab6a09ea3/riskcal-1.4.0.tar.gz", hash = "sha256:78f8565eb80976580f1f4b8f36a6698b56ea32dcb9bfe0af59cfcc62ea4d4025", size = 27838 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/b5/9a9e4b88e4ba428f9014828f29def9ea15ffbd7d316b9b0acdd67f2d3499/riskcal-1.3.0-py3-none-any.whl", hash = "sha256:01db53830434fd3ab4b9349d1f87d160664fea4c2da55639d9f387e3363d617d", size = 35005 },
+    { url = "https://files.pythonhosted.org/packages/a7/b6/bebc933d345a8de261477e795e5307ff2aef000895f73cd1c5aa85968252/riskcal-1.4.0-py3-none-any.whl", hash = "sha256:a05d66eeaa664f1de5ec40b43ce743712cd7c125499d0ba0c66c5f9e463be531", size = 35329 },
 ]
 
 [[package]]
@@ -988,7 +988,7 @@ requires-dist = [
     { name = "dpmm", specifier = ">=0.1.9" },
     { name = "myst-parser", extras = ["linkify"], marker = "extra == 'docs'", specifier = ">=3.0" },
     { name = "nbsphinx", marker = "extra == 'docs'", specifier = ">=0.9" },
-    { name = "riskcal", specifier = ">=1.3.0" },
+    { name = "riskcal", specifier = "==1.4.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=7.0" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'", specifier = ">=0.5" },
     { name = "sphinx-rtd-theme", marker = "extra == 'docs'", specifier = ">=2.0" },

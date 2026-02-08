@@ -2,8 +2,6 @@
 
 Synthetic data generation with interpretable privacy guarantees in terms of attack risk.
 
----
-
 This library provides privacy-preserving synthetic tabular data generation using differential
 privacy, with privacy specified in terms of concrete attack risk (advantage, TPR/FPR) rather
 than abstract epsilon-delta parameters. We provide a detailed explanation on specifying target risk
@@ -22,7 +20,7 @@ on the substituted data[^5]. The Select-Measure-Generate architecture preserves 
 _marginals_—queries like "how many men over 60 with diabetes are in the dataset"—which are guaranteed
 to be close to the original, depending on the privacy level.
 
-In a glance:
+At a glance:
 
 | Aspect           | Support
 | ---------------- | --------------------------------- |
