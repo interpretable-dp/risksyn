@@ -12,6 +12,35 @@ from risksyn.risk import Risk, calibrate_parameters_to_risk, _epsilon_to_rho_lap
 # Empirically tested default from dpmm library
 _DEFAULT_PROC_EPSILON = 0.1
 
+# Numeric columns with at most this many unique values are auto-treated as categorical
+_AUTO_CATEGORICAL_THRESHOLD = 10
+
+
+def _auto_categorize(
+    data: pd.DataFrame, domain: Optional[dict]
+) -> tuple[pd.DataFrame, dict]:
+    """Auto-detect low-cardinality numeric columns and treat as categorical.
+
+    Numeric columns with <= _AUTO_CATEGORICAL_THRESHOLD unique values are
+    cast to string dtype and given categorical domains to avoid private
+    bounds estimation.
+
+    Returns a (possibly modified) copy of data and the augmented domain.
+    """
+    domain = dict(domain) if domain else {}
+    cols_to_cast = []
+    for col, series in data.items():
+        if col in domain:
+            continue
+        if series.dtype.kind in "ui":  # uint, int only
+            if series.nunique() <= _AUTO_CATEGORICAL_THRESHOLD:
+                domain[col] = sorted(str(v) for v in series.unique())
+                cols_to_cast.append(col)
+    if cols_to_cast:
+        data = data.copy()
+        data[cols_to_cast] = data[cols_to_cast].astype(str)
+    return data, domain
+
 
 def _requires_private_preprocessing(data: pd.DataFrame, domain: Optional[dict]) -> bool:
     """Check if any numeric column lacks bounds in domain.
@@ -24,8 +53,10 @@ def _requires_private_preprocessing(data: pd.DataFrame, domain: Optional[dict]) 
             if domain is None:
                 return True
             col_domain = domain.get(col, {})
+            if isinstance(col_domain, list):
+                continue  # categorical domain provided, no bounds needed
             if not isinstance(col_domain, dict):
-                return True  # categorical-style domain for numeric column
+                return True
             if col_domain.get("lower") is None or col_domain.get("upper") is None:
                 return True
     return False
@@ -103,6 +134,8 @@ class AIMGenerator:
         UserWarning
             If privacy budget for generation is smaller than for processing.
         """
+        data, domain = _auto_categorize(data, domain)
+
         needs_preprocessing = _requires_private_preprocessing(data, domain)
 
         if needs_preprocessing:
@@ -135,7 +168,22 @@ class AIMGenerator:
             proc_epsilon=params.get("proc_epsilon"),
             gen_kwargs={"degree": self._degree},
         )
-        self._pipeline.fit(data, domain)
+        _BOUNDS_ERROR_MSG = (
+            "Private bounds estimation failed for one or more numeric columns. "
+            "This typically happens when the privacy budget is too small to detect "
+            "data bounds. Remedies: (1) provide explicit domain bounds for numeric "
+            "columns via the domain parameter, e.g. domain={'col': {'lower': 0, "
+            "'upper': 100}}, (2) increase proc_epsilon, or (3) relax the risk "
+            "requirement."
+        )
+        try:
+            self._pipeline.fit(data, domain)
+        except (TypeError, KeyError) as e:
+            raise ValueError(_BOUNDS_ERROR_MSG) from e
+        except ValueError as e:
+            if "Private bounds estimation failed" not in str(e):
+                raise ValueError(_BOUNDS_ERROR_MSG) from e
+            raise
         return self
 
     def generate(self, count: int) -> pd.DataFrame:

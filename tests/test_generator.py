@@ -4,6 +4,7 @@ import pytest
 from sklearn.datasets import load_wine
 
 from risksyn import AIMGenerator, Risk
+from risksyn.generator import _auto_categorize, _requires_private_preprocessing
 
 
 # Simple dataset for fast tests
@@ -110,6 +111,71 @@ def test_generate_before_fit_raises():
     gen = AIMGenerator(risk=risk)
     with pytest.raises(RuntimeError, match="Must call fit"):
         gen.generate(count=10)
+
+
+def test_auto_categorize_binary_int_columns():
+    """Low-cardinality int columns should be auto-categorized and cast to str."""
+    df = pd.DataFrame({
+        "binary": [0, 1, 0, 1, 1],
+        "ternary": [0, 1, 2, 0, 1],
+        "continuous": np.random.uniform(0, 100, 5),
+        "cat": ["a", "b", "c", "a", "b"],
+    })
+    out_data, domain = _auto_categorize(df, None)
+    assert domain["binary"] == ["0", "1"]
+    assert domain["ternary"] == ["0", "1", "2"]
+    assert out_data["binary"].dtype == object
+    assert out_data["ternary"].dtype == object
+    assert "continuous" not in domain  # float, not int
+    assert "cat" not in domain  # not numeric
+
+
+def test_auto_categorize_respects_existing_domain():
+    """Auto-categorization should not override user-provided domain."""
+    df = pd.DataFrame({"x": [0, 1, 0, 1]})
+    user_domain = {"x": {"lower": 0, "upper": 1}}
+    _, domain = _auto_categorize(df, user_domain)
+    assert domain["x"] == {"lower": 0, "upper": 1}
+
+
+def test_auto_categorize_skips_high_cardinality():
+    """Int columns with >10 unique values should not be auto-categorized."""
+    df = pd.DataFrame({"x": list(range(11))})
+    _, domain = _auto_categorize(df, None)
+    assert "x" not in domain
+
+
+def test_requires_private_preprocessing_false_for_list_domain():
+    """List domain on a numeric column means no preprocessing needed."""
+    df = pd.DataFrame({"x": [0, 1, 0, 1]})
+    assert not _requires_private_preprocessing(df, {"x": [0, 1]})
+
+
+def test_binary_int_columns_fit_without_domain():
+    """Binary int columns should fit without explicit domain via auto-categorization."""
+    np.random.seed(42)
+    df = pd.DataFrame({
+        "a": np.random.choice([0, 1], 100),
+        "b": np.random.choice([0, 1], 100),
+        "cat": np.random.choice(["x", "y"], 100),
+    })
+    risk = Risk.from_advantage(0.25)
+    gen = AIMGenerator(risk=risk)
+    gen.fit(df)
+    synth = gen.generate(count=10)
+    assert len(synth) == 10
+    assert list(synth.columns) == list(df.columns)
+
+
+def test_bounds_estimation_failure_raises_value_error():
+    """Should raise ValueError (not TypeError) when private bounds estimation fails."""
+    np.random.seed(42)
+    # High-cardinality float column with tiny budget -> approx_bounds will fail
+    df = pd.DataFrame({"x": np.random.uniform(0, 1, 50)})
+    risk = Risk.from_zcdp(0.001)
+    gen = AIMGenerator(risk=risk, proc_epsilon=0.001)
+    with pytest.raises(ValueError, match="Private bounds estimation failed"):
+        gen.fit(df)
 
 
 def test_categorical_only_no_preprocessing():
