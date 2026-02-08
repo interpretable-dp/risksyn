@@ -5,16 +5,23 @@
 
 ```{toctree}
 :maxdepth: 2
-:caption: Documentation
+:caption: Guides
 
 risk-modeling
-api/index
+generation
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: API reference
+
+api/risk
+api/generator
 ```
 
 ```{toctree}
 :maxdepth: 1
 :caption: Links
 
-GitHub Repository <https://github.com/bogdan-kulynych/risksyn>
-PyPI Package <https://pypi.org/project/risksyn/>
+GitHub Repository <https://github.com/interpretable-dp/risksyn>
 ```

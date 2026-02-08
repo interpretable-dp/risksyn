@@ -86,7 +86,7 @@ We quantify the risk of this attack using two notions:
 
 - **Success rate**. The probability of the adversary successfully reconstructing the relevant
   parts of the record. What constitutes the relevant part, and what is successful enough for
-  the adversary–is anything. For instance, the adversary might decide it is a success if they
+  the adversary—is anything. For instance, the adversary might decide it is a success if they
   reconstruct age within 3 years error and zip code within a city.
 - **Baseline**. The probability of the adversary successfully reconstructing a relevant part
   of the record by chance.
@@ -121,22 +121,83 @@ to stick to such strong model:
 This library uses the unifying framework of reasoning about all of the threats above
 simultaneously[^5]. In this framework, we need:
 
-- (a) a single number to limit the TPR of membership inference attacks and the success rate of
-  the other attacks, and
-- (b) a single number to set the FPR of membership inference attacks and the baseline of the
-  other attacks.
+- **TPR/Success rate.** A single number to limit the TPR of membership inference attacks and the
+  success rate of the other attacks, and
+- **FPR/Baseline.** A single number to set the FPR of membership inference attacks and the baseline
+  of the other attacks.
 
-In other words, we need to specify maximum TPR/Success Rate at any given FPR/Baseline, and the
+In other words, we need to specify maximum TPR/Success rate at any given FPR/Baseline, and the
 library will ensure that that all of the threats above must provably satisfy these constraints.
 
-In this unifying approach, we can precisely characterize the TPR and FPR of membership inference
-attacks. For the other attacks, however, the cost of the simple unifying approach is losing the
-precision. In other words, if we specify a certain maximum risk of reconstruction attacks, we
-will indeed limit the risk of these attacks, but there might not be any attack that actually
-reaches that risk, thus the protection will be stronger than strictly necessary to limit that
-threat. Therefore, we will have to add more noise than strictly necessary.
+_Note:_ The unifying approach is convenient because specifying only these two quantities enables us to limit
+the success rates of many different kinds of attack. It is only, however, precise for membership
+inference attacks. For the other attacks, the risk specification is pessimistic. In other words, if
+we specify a certain maximum risk of reconstruction attacks, we correctly limit the risk of these
+attacks, but there might not be any attack that actually reaches that risk. Thus, the protection
+will be stronger than strictly necessary to limit that threat; therefore, we will have to add more
+noise than strictly necessary.
 
-### Examples
+### Success and Baseline vs. Advantage
+
+A common way to quantify risk is additive advantage, often used for membership inference attacks as
+TPR - FPR. It also naturally works with other attacks, where advantage is Success rate - Baseline.
+We support specifying the risk as either setting TPR/Success Rate and FPR/Baseline with `Risk.from_success_at_baseline`, or Advantage and
+Baseline with `Risk.from_advantage_at_baseline`, which are equivalent but different ways to specify risk.
+
+### Additive vs. Multiplicative Advantage
+
+When specifying risk using additive advantage at a given baseline, the same additive advantage can
+correspond to very different multiplicative increases in the adversary's success rate depending on the
+baseline. For example, an advantage of 0.05 at a baseline of 0.001 sounds small, but it means the
+adversary's success rate increases from 0.1% to 5.1%—a 51x multiplicative increase.
+
+The library warns when the multiplicative factor is large, as this
+suggests the additive advantage may give a false sense of security. In such cases, consider using
+`Risk.from_success_at_baseline` to specify the exact success rate and baseline directly, which makes
+the multiplicative increase explicit.
+
+### Combining Risk Requirements
+
+When multiple threats are relevant—for example, both membership inference and re-identification—it
+may not be obvious which one imposes the strictest privacy requirement. The `|` operator combines
+multiple `Risk` specifications by selecting the minimum rho (most restrictive), automatically
+choosing whichever constraint is tightest:
+
+```python
+from risksyn import Risk
+
+# Whichever constraint is more restrictive wins
+risk = Risk.from_advantage(0.01) | Risk.from_advantage_at_baseline(0.05, 0.001)
+```
+
+This ensures that all specified threat constraints are satisfied simultaneously.
+
+### Estimating Baselines vs. Baseline-Independent Specification
+
+For re-identification and singling out, attribute inference, and data reconstruction, we need to
+estimate reasonable baseline success rates of attacks that we want to limit. Next, we provide
+examples of baseline estimates:
+- **Singling out.** Suppose that the adversary aims to single out a record out of a population of
+  1000 potential real records. To model the fact that the adversary has no preference across the
+  1000 candidate records, we can set the baseline to 1 in 1000.
+- **Attribute inference.** Suppose that the adversary aims to infer an attribute which
+  corresponds to a gene mutation with 10 possible value. We can model the baseline success
+  rate of an attacker that guesses based on population statistics by finding the probability of the
+  most common mutation, say, 1/4.  Then, we can set the baseline to 1/4.
+- **Reconstruction attacks.** Suppose that the adversary aims to reconstruct an individual's yearly
+  income to within 5\% error. To model the adversary that uses publicly available data and knows the
+  individual's job type, we can get a distribution of income for this job type from publicly
+  available sources, and compute the probability of guessing the income within 5\% error by chance
+  in this distribution, say 1/10.  Then, we set the baseline to 1/10.
+
+**Baseline-independent specification.** Sometimes, it might be challenging to faithfully estimate
+baseline success rates of relevant attacks. In this case, it is possible to limit the risk in terms
+of the worst-case additive advantage across all possible attacks with `Risk.from_advantage`,
+corresponding to the highest possible Success Rate - Baseline across all baseline values. This
+should be thought as a measure of last resort, as this is quite pessimistic, thus we will need to
+add a lot of noise to limit even relatively small values of such advantage.
+
+### Example Usage
 
 The `Risk` class provides several factory methods for specifying privacy risk based on different
 threat scenarios. Here are practical examples for each threat type.
@@ -154,31 +215,32 @@ risk = Risk.from_advantage(0.10)
 # Alternatively, specify exact error rates:
 # Limit TPR to 5% when FPR is 1% (very low false positive rate)
 risk = Risk.from_err_rates(tpr=0.05, fpr=0.01)
+
+# This is exactly equivalent to:
+risk = Risk.from_success_at_baseline(success=0.05, baseline=0.01)
 ```
 
-#### Re-identification and Singling Out
+#### Re-identification, Attribute Inference, Reconstruction Attacks
 
-For re-identification attacks, specify the maximum success rate at a given baseline:
+For re-identification attacks, specify either the specific values of the maximum success rate at a
+given baseline or additive advantage at a given baseline:
 
 ```python
 from risksyn import Risk
 
-# Baseline: 1 in 10,000 chance of singling out by random guessing
-# Limit success rate to at most 1 in 1,000 (10x the baseline)
-risk = Risk.from_success_at_baseline(success=0.001, baseline=0.0001)
+# Baseline: 1 in 100 chance of attacker succeeding by random guessing.
+# Limit success rate to at most 1 in 10 (10x the baseline)
+risk = Risk.from_success_at_baseline(success=0.1, baseline=0.01)
+
+# Same risk: at most 10x the baseline is 0.09 additive advantage.
+risk = Risk.from_advantage_at_baseline(advantage=0.09, baseline=0.01)
+
+# Baseline-independent specification of maximum advantage.
+risk = Risk.from_advantage(advantage=0.09)
 ```
 
-#### Attribute Inference and Reconstruction
-
-For attribute inference, specify the advantage over random guessing:
-
-```python
-from risksyn import Risk
-
-# Baseline: 50% chance of guessing a binary attribute (e.g., HIV status)
-# Allow at most 5% advantage over baseline
-risk = Risk.from_advantage_at_baseline(advantage=0.05, baseline=0.50)
-```
+To use the `Risk` specification for synthetic data generation, see the
+[Generation](generation.md) guide.
 
 ## Advanced Usage
 

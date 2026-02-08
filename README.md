@@ -3,31 +3,28 @@
 Synthetic data generation with interpretable privacy guarantees in terms of attack risk.
 
 This library provides privacy-preserving synthetic tabular data generation using differential
-privacy, with privacy specified in terms of concrete attack risk (advantage, TPR/FPR) rather
-than abstract epsilon-delta parameters. We provide a detailed explanation on specifying target risk
-in the documentation.
+privacy, with privacy specified in terms of interpretable attack risk (advantage, TPR/FPR) rather
+than the standard epsilon-delta parameters.
 
 ### Intended Uses
 
-This library implements state-of-the-art methods for privacy-preserving synthetic tabular data
-generation—MST[^1] and AIM[^2]—using the [dpmm library](https://github.com/sassoftware/dpmm/)[^3] as a backend.
-These models use the [Select-Measure-Generate](https://differentialprivacy.org/synth-data-1/) approach,
-which is competitive with non-private generation but loses utility and speed to, e.g., GANs in high-dimensional
-domains[^4]. Currently, each record must correspond to one individual to ensure privacy.
+The library is designed to work in the following settings:
 
-Note that replacing real data with synthetic data loses the validity of statistical analyses performed
-on the substituted data[^5]. The Select-Measure-Generate architecture preserves the validity of low-degree
-_marginals_—queries like "how many men over 60 with diabetes are in the dataset"—which are guaranteed
-to be close to the original, depending on the privacy level.
-
-At a glance:
-
-| Aspect           | Support
-| ---------------- | --------------------------------- |
-| Domain           | Tabular data                      |
-| Dimensionality   | Up to 32 features                 |
-| Privacy unit     | One data record = one individual  |
-| Validity         | Low-degree marginals only         |
+- **Low-dimensional tabular data up to 32 features.** This library is designed to work with the
+  state-of-the-art [Select-Measure-Generate](https://differentialprivacy.org/synth-data-1/) paradigm
+  for privacy-preserving generation of synthetic data, which is competitive with non-private
+  generation but loses utility and speed to, e.g., privacy-preserving GANs, in high-dimensional
+  domains[^1].
+- **Validity for low-degree marginals.** Replacing real data with any kind of synthetic data in
+  general does not preserve the validity of statistical analyses performed on the substituted data,
+  i.e., the users of synthetic data cannot know how close or far are the results of the analysis to
+  those on the actual real data[^2]. The Select-Measure-Generate architecture, however, does
+  preserve the validity of _marginals_ with a given degree—queries like "how many men over 60 with
+  diabetes are in the dataset"—which are guaranteed to be close to the original, depending on the
+  privacy level. At the moment, the library does not support the derivation of confidence intervals
+  for these queries.
+- **Each record corresponds to one individual.** At the moment, each record must correspond to one
+  individual for the privacy guarantee to be meaningful at the level of individuals.
 
 ### Installation
 
@@ -39,41 +36,20 @@ uv sync --dev
 
 ### Quickstart
 
-#### Basic Usage
+There are two ways to use the library:
+- _Basic._ Generate synthetic data using AIM[^3], one of the state-of-the-art algorithms for
+  generating privacy-preserving synthetic tabular data, with the privacy guarantees specified in
+  terms of interpretable attack risk. This is the simpler approach.
+- _Customized._ Calibrate the noise parameters to ensure a given level of attack risk that can then
+  be passed as input to the [dpmm](https://github.com/sassoftware/dpmm) library calls for precise
+  control over the generation pipeline.
 
-Generate synthetic data which is designed to preserve well all 3-way marginals, with a maximum attack advantage of 20%:
+#### Specifying Target Risk
 
-```python
-import pandas as pd
-from risksyn import Risk, Generator
-
-# Sample data
-df = pd.DataFrame({
-    "age": [25, 30, 35, 40, 45],
-    "income": [50000, 60000, 70000, 80000, 90000],
-    "city": ["NYC", "LA", "NYC", "SF", "LA"],
-})
-
-# Specify domain bounds for numeric columns
-domain = {
-    "age": {"lower": 18, "upper": 100},
-    "income": {"lower": 0, "upper": 500000},
-}
-
-# Create generator with risk specification
-risk = Risk.from_advantage(0.2)  # Max 20% attack advantage
-gen = Generator(risk=risk, model="aim", gen_kwargs={"degree": 3})
-gen.fit(df, domain=domain)
-
-# Generate synthetic records
-synthetic_df = gen.generate(count=100)
-print(synthetic_df.head())
-```
-
-#### Specifying Risk
-
-The `Risk` class provides multiple ways to specify privacy requirements in the form of maximum
-allowed attack risk. We detail and explain all of the options in the documentation.
+The main feature of this library is the ability to specify the target level of privacy risk in terms
+of interpretable attack success rates instead of the classical approach of using epsilon-delta
+parameters. This is done using `Risk` class. We detail and explain all of the options in the [risk
+specification and modeling guide](https://risksyn.readthedocs.io/en/latest/risk-modeling.html).
 
 ```python
 from risksyn import Risk
@@ -90,65 +66,82 @@ risk = Risk.from_advantage_at_baseline(advantage=0.2, baseline=0.5)
 # Inference attack success rate at a given baseline
 risk = Risk.from_success_at_baseline(success=0.7, baseline=0.5)
 
+# Combine multiple risk requirements (takes the most restrictive)
+risk = Risk.from_advantage(0.01) | Risk.from_advantage_at_baseline(0.05, 0.001)
+
 # For advanced users: Check the converted zCDP value
 print(f"zCDP rho: {risk.zcdp:.4f}")
 ```
 
-#### Choosing a Model
+#### Basic Usage
 
-Three synthesis models are available:
-
-```python
-from risksyn import Risk, Generator
-
-risk = Risk.from_advantage(0.2)
-
-# AIM (default) - Adaptive and Iterative Mechanism
-gen = Generator(risk=risk, model="aim")
-
-# MST - Maximum Spanning Tree
-gen = Generator(risk=risk, model="mst")
-
-# PrivBayes - Bayesian network approach
-gen = Generator(risk=risk, model="privbayes")
-```
-
-#### Model Parameters
-
-Pass model-specific parameters via `gen_kwargs`. For AIM and PrivBayes, the `degree` parameter
-controls the maximum degree of preserved marginals (MST is inherently degree-2):
+Generate synthetic data which is designed to preserve well all 3-way marginals, which ensures that
+the maximum additive advantage of any inference attack aimed to learn information about the real
+records based on the synthetic data is at most 20 percentage points.
 
 ```python
-from risksyn import Risk, Generator
+import pandas as pd
+from risksyn import Risk, AIMGenerator
 
-risk = Risk.from_advantage(0.3)
+# Sample data
+df = pd.DataFrame({
+    "age": [25, 30, 35, 40, 45],
+    "income": [50000, 60000, 70000, 80000, 90000],
+    "city": ["NYC", "LA", "NYC", "SF", "LA"],
+})
 
-# Capture pairwise correlations (default)
-gen = Generator(risk=risk, model="aim", gen_kwargs={"degree": 2})
+# Specify domain bounds for numeric columns
+domain = {
+    "age": {"lower": 18, "upper": 100},
+    "income": {"lower": 0, "upper": 500000},
+}
 
-# Capture 3-way correlations (requires more privacy budget)
-gen = Generator(risk=risk, model="aim", gen_kwargs={"degree": 3})
+# Create generator with risk specification
+risk = Risk.from_advantage(0.2)  # Ensure max 20p.p. advantage
+gen = AIMGenerator(risk=risk, degree=3)
+gen.fit(df, domain=domain)
+
+# Generate synthetic records
+synthetic_df = gen.generate(count=100)
+print(synthetic_df.head())
 ```
 
-#### Saving and Loading Models
+We detail the options and parameters in the [generation
+guide](https://risksyn.readthedocs.io/en/latest/generation.html).
+
+#### Customized Generation Pipelines with Calibration Utilities
+
+For direct control over the [dpmm](https://github.com/sassoftware/dpmm/) generation pipeline, we
+provide `calibrate_parameters_to_risk` that converts a `Risk` object into intermediate calibrated
+noise parameters.  If numeric columns need private domain estimation, pass `proc_epsilon` to reserve
+part of the budget for preprocessing—otherwise the privacy guarantee may not hold. See the
+[generation guide](https://risksyn.readthedocs.io/en/latest/generation.html) for details.
 
 <!--pytest.mark.skip-->
 ```python
-from risksyn import Generator
+from risksyn import Risk, calibrate_parameters_to_risk
+from dpmm.pipelines import AIMPipeline
 
-# After fitting...
-gen.store("my_generator")
+risk = Risk.from_advantage(0.2)
+params = calibrate_parameters_to_risk(risk, proc_epsilon=0.1)
 
-# Later, load and generate
-loaded = Generator.load("my_generator")
-synthetic_df = loaded.generate(count=1000)
+# Verbose for illustrative purposes:
+pipeline = AIMPipeline(
+    epsilon=params["epsilon"],
+    delta=params["delta"],
+    gen_kwargs={"degree": 3},
+)
+# Simpler usage:
+pipeline = AIMPipeline(
+    gen_kwargs={"degree": 3},
+    **calibrate_parameters_to_risk(risk)
+)
+
+pipeline.fit(df, domain)
+synthetic_df = pipeline.generate(n_records=10)
 ```
 
 
-### References
-
-[^1]: [Winning the NIST Contest: A scalable and general approach to differentially private synthetic data](https://arxiv.org/abs/2108.04978). JPC 2021.
-[^2]: [AIM: An Adaptive and Iterative Mechanism for Differentially Private Synthetic Data](https://arxiv.org/abs/2201.12677). VLDB 2022.
-[^3]: [dpmm: Differentially Private Marginal Models](https://arxiv.org/abs/2506.00322). TPDP 2025.
-[^4]: [Graphical vs. Deep Generative Models: Measuring the Impact of DP on Utility](https://arxiv.org/abs/2305.10994). ACM CCS 2024.
-[^5]: [Should I use Synthetic Data for That?](https://arxiv.org/abs/2602.03791). 2025.
+[^1]: [Graphical vs. Deep Generative Models: Measuring the Impact of DP on Utility](https://arxiv.org/abs/2305.10994). ACM CCS 2024.
+[^2]: [Should I use Synthetic Data for That?](https://arxiv.org/abs/2602.03791). 2025.
+[^3]: [AIM: An Adaptive and Iterative Mechanism for Differentially Private Synthetic Data](https://arxiv.org/abs/2201.12677). VLDB 2022.

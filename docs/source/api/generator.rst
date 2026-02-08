@@ -1,5 +1,5 @@
-Generator
-=========
+AIMGenerator
+============
 
 .. automodule:: risksyn.generator
    :members:
