@@ -38,7 +38,7 @@ dev = [
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--codeblocks"]
-testpaths = ["tests", "README.md"]
+testpaths = ["tests", "README.md", "docs/source/risk-modeling.md"]
 
 [tool.uv]
 default-groups = []

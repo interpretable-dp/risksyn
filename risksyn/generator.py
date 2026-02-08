@@ -157,7 +157,10 @@ class Generator:
             gen_rho = self._risk.zcdp  # Full budget for generation
             proc_epsilon = None
 
-        # Convert generation zCDP to (epsilon, delta)-DP
+        # Convert generation zCDP to (epsilon, delta)-DP as a crutch, as the backend
+        # does not support zCDP as a target privacy parameter.
+        # IMPORTANT: This conversion is suboptimal per se, but it does not have to be optimal.
+        # it has to be exactly what is done by the backend library.
         delta = cdp_delta(gen_rho, _CALIBRATION_EPSILON)
 
         pipeline_cls = MODELS[self._model]

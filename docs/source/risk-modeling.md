@@ -1,4 +1,4 @@
-# Privacy Risk Modeling
+# Risk Modeling
 
 There are two persistent myths about the privacy of synthetic data. First, that synthetization alone
 ensures privacy of the original data by default. This is false[^1]. Second, that the privacy risk
@@ -15,11 +15,11 @@ randomness, that are deliberately added to the synthetic data generation procedu
 the privacy guarantee that we require, the more noise we have to add. In practice, we need to strike
 a balance between the privacy and utility requirements.
 
-## Threats
+## Attacks
 
-Standard threats relevant for synthetic data releases are:
+Next, we describe the standard threats relevant to synthetic data releases.
 
-### Membership Inference Attack
+### Membership Inference Attacks
 
 An adversary aims to infer whether a given record has been part of the original dataset by
 observing the synthetic dataset or the generative model. We quantify the risk of this attack
@@ -43,7 +43,7 @@ which is the most dangerous setting.
 ### Re-identification and Singling Out
 
 This threat has been initially conceptualized in the context of classical anonymization methods,
-but naturally extends to other aggregate data-driven releases of models and synthetic data[^5].
+but naturally extends to other aggregate data-driven releases of models and synthetic data[^4].
 In this setting, an adversary aims to find a simple rule, a _predicate_, e.g., a Colombian woman
 over 60 that speaks Mandarin, which matches only one record in the original real dataset, after
 observing the synthetic dataset or the generative model.
@@ -59,7 +59,7 @@ To present the risk using a single number, we can use the _advantage_:
 
 - **Advantage**. The additive difference Success rate - Baseline.
 
-### Attribute Inference Attack
+### Attribute Inference Attacks
 
 An adversary aims to infer an attribute value of a given partial record where they lack some
 parts of the record by observing the synthetic dataset or the generative model.
@@ -77,7 +77,7 @@ To present the risk using a single number, we can use the _advantage_:
 
 - **Advantage**. The additive difference Success rate - Baseline.
 
-### Reconstruction Attack
+### Reconstruction Attacks
 
 An adversary aims to reconstruct a record either given a partial record or even no record to
 start with by observing the synthetic dataset or the generative model.
@@ -104,7 +104,7 @@ record they aim to infer some information about, and that they have access to th
 generative model and the algorithm.
 
 A common reaction is to discard this threat model as overly strong and pessimistic to the point
-of not being relevant in practice. Although this is somewhat fair, there are some crucial reasons
+of not being relevant in practice. Although this is somewhat justified, there are some crucial reasons
 to stick to such strong model:
 
 1. The mathematical framework of differential privacy enables us to provide _provable privacy
@@ -119,7 +119,7 @@ to stick to such strong model:
 ## Specifying Maximum Risk
 
 This library uses the unifying framework of reasoning about all of the threats above
-simultaneously[^10]. In this framework, we need:
+simultaneously[^5]. In this framework, we need:
 
 - (a) a single number to limit the TPR of membership inference attacks and the success rate of
   the other attacks, and
@@ -136,12 +136,12 @@ will indeed limit the risk of these attacks, but there might not be any attack t
 reaches that risk, thus the protection will be stronger than strictly necessary to limit that
 threat. Therefore, we will have to add more noise than strictly necessary.
 
-## Examples
+### Examples
 
 The `Risk` class provides several factory methods for specifying privacy risk based on different
 threat scenarios. Here are practical examples for each threat type.
 
-### Membership Inference
+#### Membership Inference
 
 For membership inference attacks, you can specify risk in terms of advantage or error rates:
 
@@ -156,7 +156,7 @@ risk = Risk.from_advantage(0.10)
 risk = Risk.from_err_rates(tpr=0.05, fpr=0.01)
 ```
 
-### Re-identification and Singling Out
+#### Re-identification and Singling Out
 
 For re-identification attacks, specify the maximum success rate at a given baseline:
 
@@ -168,7 +168,7 @@ from risksyn import Risk
 risk = Risk.from_success_at_baseline(success=0.001, baseline=0.0001)
 ```
 
-### Attribute Inference and Reconstruction
+#### Attribute Inference and Reconstruction
 
 For attribute inference, specify the advantage over random guessing:
 
@@ -180,33 +180,27 @@ from risksyn import Risk
 risk = Risk.from_advantage_at_baseline(advantage=0.05, baseline=0.50)
 ```
 
-### Advanced Usage
+## Advanced Usage
 
-**Under the hood.** The `Risk` class maps the given risk notions to zCDP (zero-concentrated
-differential privacy). During generation, the library then maps zCDP back to epsilon/delta as a
-crutch, since the backend library `dpmm` does not support direct rho inputs. The risk notions
-correspond to an f-DP trade-off curve—a single point on the curve defines the zCDP parameter.
+**Under the hood.** The `Risk` class maps the given risk notions to a zCDP parameter.  During the
+`fit()` call, the library then maps zCDP back to epsilon/delta as a crutch, as the backend library
+`dpmm` does not support a direct zCDP parameterization. All the described risk notions correspond to
+a single point on the f-DP trade-off curve. As zCDP is a single-parameter privacy notion, a single
+point on the curve uniquely determines the zCDP parameter.
 
-```python
-from risksyn import Risk
-
-# Specify privacy directly using zCDP parameter
-risk = Risk.from_zcdp(rho=0.5)
-```
-
-**Additional notions of risk.** We use the unifying framework which uses the f-DP trade-off curve
-to loosely upper bound success rates at given baselines for various attacks. For specific threat
-models, e.g., binary attributes, it is possible to obtain more precise bounds. In particular, it
-is possible to map f-DP or privacy profile to Bayes risk under binary attribute inference (see
-Appendix D in [the unifying framework paper](https://arxiv.org/abs/2507.06969)). The current
-library's interface does not support direct usage of such risk specifications, but you can map
-any notion of risk to f-DP and supply that, ignoring the suggested interpretation of the points
-on the curve as success/baseline.
+**Additional notions of risk.** The guide above employs the unifying framework[^5] that uses the
+f-DP trade-off curve to loosely upper bound success rates at given baselines for various attacks.
+For specific threat models, e.g., binary attribute inference, it is possible to obtain more precise
+bounds. In particular, it is possible to map f-DP or privacy profile to Bayes risk under binary
+attribute inference (see Appendix D in the unifying framework paper[^5]). The current library's
+interface does not support directly specifying risk in these terms, but you can map any notion of
+risk to f-DP and supply that, ignoring the suggested interpretation of the points on the curve as
+success/baseline.
 
 ## References
 
 [^1]: [Synthetic Data – Anonymisation Groundhog Day](https://arxiv.org/abs/2011.07018). Usenix 2022.
 [^2]: [On the Inadequacy of Similarity-based Privacy Metrics](https://arxiv.org/abs/2312.05114). IEEE S&P 2025.
 [^3]: [The DCR Delusion: Measuring the Privacy Risk of Synthetic Data](https://arxiv.org/abs/2505.01524). ESORICS 2025.
-[^5]: [Towards Formalizing the GDPR's Notion of Singling Out](https://arxiv.org/abs/1904.06009). PNAS 2020.
-[^10]: [Unifying Re-Identification, Attribute Inference, and Data Reconstruction Risks](https://arxiv.org/pdf/2507.06969). NeurIPS 2025.
+[^4]: [Towards Formalizing the GDPR's Notion of Singling Out](https://arxiv.org/abs/1904.06009). PNAS 2020.
+[^5]: [Unifying Re-Identification, Attribute Inference, and Data Reconstruction Risks](https://arxiv.org/pdf/2507.06969). NeurIPS 2025.
