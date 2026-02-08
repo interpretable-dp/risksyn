@@ -49,7 +49,7 @@ def wine_domain(wine_df):
 
 def test_generate_basic(simple_df, simple_domain):
     """Basic generation test with simple data."""
-    risk = Risk.from_advantage(0.2)
+    risk = Risk.from_zcdp(0.5)
     gen = Generator(risk=risk, model="mst")
     gen.fit(simple_df, domain=simple_domain)
     synth = gen.generate(count=10)
@@ -103,7 +103,7 @@ def test_no_error_with_low_budget_when_domain_provided(simple_df, simple_domain)
 
 def test_generate_before_fit_raises():
     """Should raise if generate() called before fit()."""
-    risk = Risk.from_advantage(0.2)
+    risk = Risk.from_zcdp(0.5)
     gen = Generator(risk=risk, model="mst")
     with pytest.raises(RuntimeError, match="Must call fit"):
         gen.generate(count=10)
@@ -111,7 +111,7 @@ def test_generate_before_fit_raises():
 
 def test_unknown_model():
     """Should raise for unknown model."""
-    risk = Risk.from_advantage(0.2)
+    risk = Risk.from_zcdp(0.5)
     with pytest.raises(ValueError, match="Unknown model"):
         Generator(risk=risk, model="unknown")
 
@@ -131,7 +131,7 @@ def test_categorical_only_no_preprocessing():
 
 def test_store_and_load(simple_df, simple_domain, tmp_path):
     """Test storing and loading a fitted generator."""
-    risk = Risk.from_advantage(0.2)
+    risk = Risk.from_zcdp(0.5)
     gen = Generator(risk=risk, model="mst")
     gen.fit(simple_df, domain=simple_domain)
 
@@ -149,7 +149,7 @@ def test_store_and_load(simple_df, simple_domain, tmp_path):
 
 def test_store_before_fit_raises(tmp_path):
     """Should raise if store() called before fit()."""
-    risk = Risk.from_advantage(0.2)
+    risk = Risk.from_zcdp(0.5)
     gen = Generator(risk=risk, model="mst")
     with pytest.raises(RuntimeError, match="Must call fit"):
         gen.store(tmp_path / "generator")

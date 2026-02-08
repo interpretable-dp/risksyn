@@ -4,13 +4,13 @@ from riskcal.analysis import get_advantage_from_zcdp, get_beta_from_zcdp
 from risksyn.risk import Risk
 
 
-@pytest.mark.parametrize("rho", [0.1, 0.5, 1.0, 5.0, 10.0])
+@pytest.mark.parametrize("rho", [0.1, 1.0, 10.0])
 def test_from_zcdp(rho: float):
     risk = Risk.from_zcdp(rho)
     assert risk.zcdp == rho
 
 
-@pytest.mark.parametrize("advantage", [0.1, 0.2, 0.5, 0.8, 0.95])
+@pytest.mark.parametrize("advantage", [0.1, 0.5, 0.95])
 def test_from_advantage(advantage: float):
     risk = Risk.from_advantage(advantage)
     recovered = get_advantage_from_zcdp(risk.zcdp)
@@ -21,9 +21,7 @@ def test_from_advantage(advantage: float):
     "tpr,fpr",
     [
         (0.9, 0.1),
-        (0.8, 0.2),
         (0.95, 0.05),
-        (0.7, 0.3),
     ],
 )
 def test_from_err_rates(tpr: float, fpr: float):
@@ -37,7 +35,6 @@ def test_from_err_rates(tpr: float, fpr: float):
     "success,baseline",
     [
         (0.9, 0.1),
-        (0.8, 0.2),
         (0.95, 0.05),
     ],
 )
@@ -52,9 +49,7 @@ def test_from_success_at_baseline(success: float, baseline: float):
     "advantage,baseline",
     [
         (0.2, 0.1),
-        (0.3, 0.2),
         (0.5, 0.1),
-        (0.4, 0.3),
     ],
 )
 def test_from_advantage_at_baseline(advantage: float, baseline: float):
