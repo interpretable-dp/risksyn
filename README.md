@@ -29,7 +29,6 @@ In a glance:
 | Dimensionality   | Up to 32 features                 |
 | Privacy unit     | One data record = one individual  |
 | Validity         | Low-degree marginals only         |
-|------------------|-----------------------------------|
 
 ### Installation
 
