@@ -4,7 +4,7 @@ import pytest
 from sklearn.datasets import load_wine
 
 from risksyn import AIMGenerator, Risk
-from risksyn.generator import _auto_categorize, _requires_private_preprocessing
+from risksyn.processing import _auto_categorize, _numeric_cols_without_bounds
 
 
 # Simple dataset for fast tests
@@ -59,13 +59,21 @@ def test_generate_basic(simple_df, simple_domain):
     assert list(synth.columns) == list(simple_df.columns)
 
 
-@pytest.mark.parametrize("proc_epsilon", [None, 1.0])
-def test_raises_when_rho_less_than_proc_rho(simple_df, proc_epsilon):
-    """Should raise in fit() when risk.zcdp <= proc_rho and preprocessing is needed."""
+def test_raises_when_proc_epsilon_none(simple_df):
+    """Should raise in fit() when proc_epsilon is None and bounds are needed."""
     risk = Risk.from_zcdp(0.1)
-    gen = AIMGenerator(risk=risk, proc_epsilon=proc_epsilon)
-    with pytest.raises(ValueError, match="Insufficient privacy budget"):
-        gen.fit(simple_df)  # No domain -> needs preprocessing
+    gen = AIMGenerator(risk=risk, proc_epsilon=None)
+    with pytest.raises(ValueError, match="No domain bounds"):
+        gen.fit(simple_df)
+
+
+def test_warns_when_proc_epsilon_too_small(simple_df):
+    """Should warn in fit() when proc_epsilon is too small for bounds estimation."""
+    risk = Risk.from_zcdp(0.1)
+    gen = AIMGenerator(risk=risk, proc_epsilon=0.01)
+    with pytest.warns(UserWarning, match="Epsilon budget for private bounds estimation is too small"):
+        with pytest.raises((ValueError, TypeError)):
+            gen.fit(simple_df)
 
 
 def test_warns_when_gen_rho_less_than_proc_rho():
@@ -145,10 +153,10 @@ def test_auto_categorize_skips_high_cardinality():
     assert "x" not in domain
 
 
-def test_requires_private_preprocessing_false_for_list_domain():
-    """List domain on a numeric column means no preprocessing needed."""
+def test_numeric_cols_without_bounds_skips_list_domain():
+    """List domain on a numeric column means no bounds needed."""
     df = pd.DataFrame({"x": [0, 1, 0, 1]})
-    assert not _requires_private_preprocessing(df, {"x": [0, 1]})
+    assert _numeric_cols_without_bounds(df, {"x": [0, 1]}) == []
 
 
 def test_binary_int_columns_fit_without_domain():
@@ -167,15 +175,46 @@ def test_binary_int_columns_fit_without_domain():
     assert list(synth.columns) == list(df.columns)
 
 
-def test_bounds_estimation_failure_raises_value_error():
-    """Should raise ValueError (not TypeError) when private bounds estimation fails."""
+def test_warns_when_low_epsilon_per_column():
+    """Should warn when epsilon per column is too small for bounds estimation."""
     np.random.seed(42)
-    # High-cardinality float column with tiny budget -> approx_bounds will fail
     df = pd.DataFrame({"x": np.random.uniform(0, 1, 50)})
-    risk = Risk.from_zcdp(0.001)
-    gen = AIMGenerator(risk=risk, proc_epsilon=0.001)
-    with pytest.raises(ValueError, match="Private bounds estimation failed"):
-        gen.fit(df)
+    risk = Risk.from_zcdp(0.5)
+    gen = AIMGenerator(risk=risk, proc_epsilon=0.01)
+    with pytest.warns(UserWarning, match="Epsilon budget for private bounds estimation is too small"):
+        with pytest.raises((ValueError, TypeError)):
+            gen.fit(df)
+
+
+def test_unsafe_infer_bounds():
+    """unsafe_infer_bounds should use data min/max and warn."""
+    np.random.seed(42)
+    df = pd.DataFrame({
+        "x": np.random.uniform(0, 100, 200),
+        "y": np.random.uniform(-50, 50, 200),
+    })
+    risk = Risk.from_zcdp(0.5)
+    gen = AIMGenerator(risk=risk)
+    with pytest.warns(UserWarning, match="PrivacyLeakage"):
+        gen.fit(df, unsafe_infer_bounds=True)
+    synth = gen.generate(count=10)
+    assert len(synth) == 10
+
+
+def test_unsafe_infer_bounds_with_partial_domain():
+    """unsafe_infer_bounds should only infer for columns without bounds."""
+    np.random.seed(42)
+    df = pd.DataFrame({
+        "a": np.random.uniform(0, 100, 200),
+        "b": np.random.uniform(0, 100, 200),
+    })
+    domain = {"a": {"lower": 0.0, "upper": 100.0}}
+    risk = Risk.from_zcdp(0.5)
+    gen = AIMGenerator(risk=risk)
+    with pytest.warns(UserWarning, match="PrivacyLeakage.*'b'"):
+        gen.fit(df, domain=domain, unsafe_infer_bounds=True)
+    synth = gen.generate(count=10)
+    assert len(synth) == 10
 
 
 def test_categorical_only_no_preprocessing():
@@ -210,6 +249,10 @@ def test_store_and_load(simple_df, simple_domain, tmp_path):
     synth = loaded.generate(count=10)
     assert len(synth) == 10
     assert list(synth.columns) == list(simple_df.columns)
+
+    # Column schema should be preserved
+    for col in simple_df.columns:
+        assert synth[col].dtype == simple_df[col].dtype
 
 
 def test_store_before_fit_raises(tmp_path):
