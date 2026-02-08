@@ -1,3 +1,4 @@
+
 [project]
 name = "risksyn"
 version = "0.1.0"
@@ -39,5 +40,12 @@ dev = [
 addopts = ["-v", "--codeblocks"]
 testpaths = ["tests", "README.md", "docs/source/risk-modeling.md"]
 
+[build-system]
+requires = ["uv_build>=0.7.19,<0.8.0"]
+build-backend = "uv_build"
+
 [tool.uv]
 default-groups = []
+
+[tool.uv.build-backend]
+module-root = ""
