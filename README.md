@@ -37,6 +37,11 @@ The library is designed to work in the following settings:
 
 ### Installation
 
+Currently, you need to get a copy of the repo, e.g., with `git clone`, and install locally:
+```
+pip install -e .
+```
+
 For local development:
 <!--pytest.mark.skip-->
 ```bash
