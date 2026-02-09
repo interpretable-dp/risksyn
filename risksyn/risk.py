@@ -69,7 +69,9 @@ class Risk:
         """
         From success rate (TPR) at a given baseline (FPR).
         """
-        return Risk.from_err_rates(tpr=success, fpr=baseline, tol=tol, max_iter=max_iter)
+        return Risk.from_err_rates(
+            tpr=success, fpr=baseline, tol=tol, max_iter=max_iter
+        )
 
     @staticmethod
     def from_advantage_at_baseline(
@@ -168,14 +170,15 @@ def _epsilon_to_rho(epsilon: float) -> float:
     return epsilon**2 / 2
 
 
-def calibrate_parameters_to_risk(
-    risk: Risk, proc_epsilon: float | None = None
-) -> dict:
-    """Calibrate (epsilon, delta) parameters from a Risk specification.
+def calibrate_parameters_to_risk(risk: Risk, proc_epsilon: float | None = None) -> dict:
+    """Calibrate (epsilon, delta) parameters for dpmm from a Risk specification.
 
     Converts a Risk object into the (epsilon, delta) parameters needed by
     differential privacy pipelines. Optionally accounts for preprocessing
     budget.
+
+    This calibration is specific to dpmm, and does not necessarily apply to other
+    implementations.
 
     Parameters
     ----------

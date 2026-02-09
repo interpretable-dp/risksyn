@@ -64,7 +64,7 @@ There are two ways to use the library:
 The main feature of this library is the ability to specify the target level of privacy risk in terms
 of interpretable attack success rates instead of the classical approach of using epsilon-delta
 parameters. This is done using the `Risk` class. We detail and explain all of the options in the [risk
-specification and modeling guide](https://risksyn.readthedocs.io/en/latest/risk-modeling.html).
+specification and modeling guide](https://risksyn.readthedocs.io/latest/risk-modeling.html).
 
 ```python
 from risksyn import Risk
@@ -122,7 +122,7 @@ print(synthetic_df.head())
 ```
 
 We detail the options and parameters in the [generation
-guide](https://risksyn.readthedocs.io/en/latest/generation.html).
+guide](https://risksyn.readthedocs.io/latest/generation.html).
 
 #### Customized Generation Pipelines with Calibration Utilities
 
@@ -130,7 +130,7 @@ For direct control over the [dpmm](https://github.com/sassoftware/dpmm/) generat
 provide `calibrate_parameters_to_risk` that converts a `Risk` object into intermediate calibrated
 noise parameters.  If numeric columns need private domain estimation, pass `proc_epsilon` to reserve
 part of the budget for preprocessing—otherwise the privacy guarantee may not hold. See the
-[generation guide](https://risksyn.readthedocs.io/en/latest/generation.html) for details.
+[generation guide](https://risksyn.readthedocs.io/latest/generation.html) for details.
 
 <!--pytest.mark.skip-->
 ```python
