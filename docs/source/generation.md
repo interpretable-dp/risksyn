@@ -1,12 +1,14 @@
 # Generation
 
 This guide explains how to generate privacy-preserving synthetic data, covering both the streamlined
-`AIMGenerator` interface and the lower-level calibration utilities.
+`AIMGenerator` interface and the lower-level calibration function.
 
 ## How Marginal-Based Generation Works
 
-This library uses the AIM (Adaptive and Iterative Mechanism)[^1] algorithm for synthetic data
-generation. AIM belongs to the
+### Main Generation Algorithm
+
+This library uses the AIM (Adaptive and Iterative Mechanism)[^1] algorithm for privacy-preserving
+synthetic data generation. AIM belongs to the
 [Select-Measure-Generate](https://differentialprivacy.org/synth-data-1/) family of algorithms, which
 work in three steps:
 
@@ -28,6 +30,21 @@ group:
 The number of columns in a marginal is its **degree**. Higher-degree marginals capture more complex
 relationships, but there are exponentially more of them. AIM adaptively selects which marginals to
 measure, focusing the privacy budget on the marginals that matter most for the data distribution.
+
+### Pre-Processing
+
+To provide end-to-end privacy guarantees, we need to ensure there is no leakage privacy in the
+entire synthetic data generation pipeline, and that includes pre-processing. The AIM algorithm
+expects to take as input the following data domain information:
+- _Bounds._  The minimum and maximum values of numeric features
+- _Binning._ Marginals are inherently discrete, thus we have to discretize numeric features by
+  clustering the domain
+
+Both of these pre-processing procedures can come with privacy leakage, as in the worst-case
+adversaries could learn information about outliers with extreme values of their features. Unless the
+bounds and bins are specified from domain knowledge, we need to allocate a part of the privacy
+budget, i.e., a part of all of the randomness used to ensure the target level of risk, to
+pre-processing.
 
 ## AIMGenerator
 
@@ -75,28 +92,9 @@ enabled unless you have a specific reason to disable it.
 
 #### `proc_epsilon` (default: 0.1)
 
-For end-to-end privacy guarantees, we need to ensure differential privacy in the entire synthetic
-data generation pipeline. Although the generation itself is covered by the AIM algorithm, AIM
-requires pre-processed data as input. Pre-processing consists of learning the minimum and maximum
-values of numeric features, and clustering the domain of numeric features into discrete categories.
-Pre-processing itself can come with privacy leakage, as, in the worst-case, adversaries could learn
-information about outliers with extreme values of their features. Unless this information is
-provided from domain knowledge, we need to allocate a part of the privacy budget, i.e., a part of
-all of the randomness used to ensure the target level of risk, to pre-processing.  This privacy
-budget is controlled with the `proc_epsilon` corresponding to the classical epsilon parameter in
-differential privacy. The library automatically handles the incorporation of this pre-processing
-procedure to ensure the target level of risk.
-
-There are two options:
-
-- **If you provide domain bounds** for all numeric columns via the `domain` parameter in `fit()`, no
-  preprocessing budget is consumed and `proc_epsilon` is not used.
-- Otherwise, **if numeric columns lack bounds**, the generator estimates them in a
-  privacy-preserving way, consuming `proc_epsilon` worth of privacy budget. The remaining budget
-  goes to generation.
-
-Providing domain bounds when possible is recommended, as it gives the full privacy budget to
-generation. We detail how to provide the bounds next.
+Controls the amount of randomness via the classical epsilon parameter in differential privacy that
+is allocated to pre-processing procedures: estimation of domain bounds and clustering of numeric features.
+It is highly recommended to at least provide domain bounds whenever possible, as detailed next.
 
 ### Domain Specification
 

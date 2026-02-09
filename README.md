@@ -19,7 +19,7 @@ than the standard epsilon-delta parameters.
 
 The library is designed to work in the following settings:
 
-- **Low-dimensional tabular data up to 32 features.** This library is designed to work with the
+- **Low-dimensional tabular data up to ≈32 features.** This library is designed to work with the
   state-of-the-art [Select-Measure-Generate](https://differentialprivacy.org/synth-data-1/) paradigm
   for privacy-preserving generation of synthetic data, which is competitive with non-private
   generation but loses utility and speed to, e.g., privacy-preserving GANs, in high-dimensional
@@ -47,8 +47,9 @@ uv sync --dev
 
 There are two ways to use the library:
 - _Basic._ Generate synthetic data using AIM[^3], one of the state-of-the-art algorithms for
-  generating privacy-preserving synthetic tabular data, with the privacy guarantees specified in
-  terms of interpretable attack risk. This is the simpler approach.
+  generating privacy-preserving synthetic tabular data. Unlike other implementations of this
+  algorithm, this library enables to specify the privacy requirement in terms of interpretable
+  attack risk.
 - _Customized._ Calibrate the noise parameters to ensure a given level of attack risk that can then
   be passed as input to the [dpmm](https://github.com/sassoftware/dpmm) library calls for precise
   control over the generation pipeline.
@@ -57,7 +58,7 @@ There are two ways to use the library:
 
 The main feature of this library is the ability to specify the target level of privacy risk in terms
 of interpretable attack success rates instead of the classical approach of using epsilon-delta
-parameters. This is done using `Risk` class. We detail and explain all of the options in the [risk
+parameters. This is done using the `Risk` class. We detail and explain all of the options in the [risk
 specification and modeling guide](https://risksyn.readthedocs.io/en/latest/risk-modeling.html).
 
 ```python
@@ -84,9 +85,9 @@ print(f"zCDP rho: {risk.zcdp:.4f}")
 
 #### Basic Usage
 
-Generate synthetic data which is designed to preserve well all 3-way marginals, which ensures that
-the maximum additive advantage of any inference attack aimed to learn information about the real
-records based on the synthetic data is at most 20 percentage points.
+Here is an example of the basic usage. We generate synthetic data to preserve all 3-way marginals
+well and ensure that the maximum additive advantage of any inference attack aimed to learn
+information about the real records based on the synthetic data is at most 20 percentage points:
 
 ```python
 import pandas as pd
@@ -152,5 +153,5 @@ synthetic_df = pipeline.generate(n_records=10)
 
 
 [^1]: [Graphical vs. Deep Generative Models: Measuring the Impact of DP on Utility](https://arxiv.org/abs/2305.10994). ACM CCS 2024.
-[^2]: [Should I use Synthetic Data for That?](https://arxiv.org/abs/2602.03791). 2025.
+[^2]: [Should I use Synthetic Data for That?](https://arxiv.org/abs/2602.03791) 2025.
 [^3]: [AIM: An Adaptive and Iterative Mechanism for Differentially Private Synthetic Data](https://arxiv.org/abs/2201.12677). VLDB 2022.
