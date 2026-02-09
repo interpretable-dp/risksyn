@@ -163,12 +163,9 @@ def _find_rho_for_alpha_beta(
 _CALIBRATION_EPSILON = 1.0
 
 
-def _epsilon_to_rho_laplace(epsilon: float) -> float:
-    """Convert epsilon to rho for Laplace mechanism.
-
-    Optimal conversion from Harrison & Manurangsi, 2025 (https://arxiv.org/abs/2510.25746)
-    """
-    return epsilon + math.exp(-epsilon) - 1
+def _epsilon_to_rho(epsilon: float) -> float:
+    """Convert pure-DP epsilon to zCDP rho: rho = epsilon^2 / 2."""
+    return epsilon**2 / 2
 
 
 def calibrate_parameters_to_risk(
@@ -201,7 +198,7 @@ def calibrate_parameters_to_risk(
     total_rho = risk.zcdp
 
     if proc_epsilon is not None:
-        proc_rho = _epsilon_to_rho_laplace(proc_epsilon)
+        proc_rho = _epsilon_to_rho(proc_epsilon)
         gen_rho = total_rho - proc_rho
         if gen_rho <= 0:
             raise ValueError(

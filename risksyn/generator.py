@@ -14,7 +14,7 @@ from risksyn.processing import (
     _detect_column_schema,
     _numeric_cols_without_bounds,
 )
-from risksyn.risk import Risk, calibrate_parameters_to_risk, _epsilon_to_rho_laplace
+from risksyn.risk import Risk, calibrate_parameters_to_risk, _epsilon_to_rho
 
 # Empirically tested default from dpmm library
 _DEFAULT_PROC_EPSILON = 0.1
@@ -139,7 +139,7 @@ class AIMGenerator:
             # Each column further splits its budget in half for bounds estimation
             eps_for_bounds = eps_per_col / 2
 
-            proc_rho = _epsilon_to_rho_laplace(proc_epsilon)
+            proc_rho = _epsilon_to_rho(proc_epsilon)
             gen_rho = self._risk.zcdp - proc_rho
             if gen_rho < proc_rho:
                 warnings.warn(
