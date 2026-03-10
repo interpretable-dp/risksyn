@@ -102,7 +102,7 @@ from risksyn import Risk, AIMGenerator
 df = pd.DataFrame({
     "age": [25, 30, 35, 40, 45],
     "income": [50000, 60000, 70000, 80000, 90000],
-    "city": ["NYC", "LA", "SF"],
+    "city": ["NYC", "LA", "NYC", "SF", "LA"],
 })
 
 # Specify domain bounds for numeric columns
