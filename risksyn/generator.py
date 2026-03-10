@@ -38,6 +38,8 @@ class AIMGenerator:
     proc_epsilon : float, default 0.1
         Epsilon budget allocated to data preprocessing (domain estimation).
         Only used if domain bounds are not provided for numeric columns.
+    n_jobs: int, default -1
+        Number of parallel jobs for AIM's internal graphical model.
 
     Examples
     --------
@@ -55,12 +57,14 @@ class AIMGenerator:
         max_model_size: int = 80,
         compress: bool = True,
         proc_epsilon: float = _DEFAULT_PROC_EPSILON,
+        n_jobs: int = -1,
     ):
         self._risk = risk
         self._degree = degree
         self._max_model_size = max_model_size
         self._compress = compress
         self._proc_epsilon = proc_epsilon
+        self._n_jobs = n_jobs
         self._pipeline = None
         self._column_schema = None
 
@@ -170,6 +174,7 @@ class AIMGenerator:
             compress=self._compress,
             max_model_size=self._max_model_size,
             proc_epsilon=params.get("proc_epsilon"),
+            n_jobs=self._n_jobs,
             gen_kwargs={"degree": self._degree},
         )
         self._pipeline.fit(data, domain)
