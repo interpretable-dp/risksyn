@@ -79,7 +79,7 @@ class AIMGenerator:
         domain : dict, optional
             Domain specification for columns. For numeric columns, use
             ``{"col": {"lower": min, "upper": max}}``. For categorical columns,
-            use ``{"col": ["val1", "val2", ...]}``. Required when privacy budget
+            use ``{"col": {"categories": ["val1", "val2", ...]}}``. Required when privacy budget
             is low to avoid private domain estimation failures.
         unsafe_infer_bounds : bool, default False
             If True, infer domain bounds from data min/max for numeric columns

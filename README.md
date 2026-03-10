@@ -102,13 +102,14 @@ from risksyn import Risk, AIMGenerator
 df = pd.DataFrame({
     "age": [25, 30, 35, 40, 45],
     "income": [50000, 60000, 70000, 80000, 90000],
-    "city": ["NYC", "LA", "NYC", "SF", "LA"],
+    "city": ["NYC", "LA", "SF"],
 })
 
 # Specify domain bounds for numeric columns
 domain = {
     "age": {"lower": 18, "upper": 100},
     "income": {"lower": 0, "upper": 500000},
+    "city": {"categories": ["NYC", "LA", "SF"]},
 }
 
 # Create generator with risk specification
